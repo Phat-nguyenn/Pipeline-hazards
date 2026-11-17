@@ -1,1 +1,1 @@
-# Pipeline-5-t-ng-x-l-hazards
+# Pipeline 5 tầng + xử lí hazards. Đồ án môn CE118
