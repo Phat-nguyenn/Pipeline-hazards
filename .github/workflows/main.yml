@@ -1,0 +1,59 @@
+name: Setup MIPS 14-Instruction Board pipeline 
+
+on:
+  workflow_dispatch: # Cho phép bấm nút chạy thủ công ngay trên web GitHub
+
+permissions:
+  issues: write
+  contents: read
+
+env:
+  PROJECT_NUMBER: "1" # Đổi thành số trên link Project của bạn (VD: .../projects/1 -> điền "1")
+  PROJECT_OWNER: "vphat1756" # Đổi thành tên Organization hoặc username chủ bảng Project
+  USER_TV1: "username-tv1"
+  USER_TV2: "username-tv2"
+  USER_TV3: "username-tv3"
+
+jobs:
+  create-board:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tạo Labels và 6 Issues phân công
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          
+          gh label create "datapath" -R "$REPO" -c "1D76DB" -d "Khối lưu trữ, bộ nhớ và cụm IF/ID/WB" --force
+          gh label create "alu-mem" -R "$REPO" -c "0E8A16" -d "Khối ALU 32-bit, EX và MEM" --force
+          gh label create "control-hazard" -R "$REPO" -c "D93F0B" -d "Control Unit, Forwarding, Hazard & Top" --force
+
+          gh issue create -R "$REPO" \
+            --title "[TV1 - Khối 1] Thiết kế RegFile 32x32, IMEM, Extender & Bộ so sánh ID (.bdf/.bsf)" \
+            --assignee "$USER_TV1" --label "datapath" \
+            --body "- Thiết kế \`reg_32bit\` và \`regfile_32x32\` (31 thanh ghi + \`\$0\` nối GND, kích cạnh xuống \`~CLK\`).\n- Thiết kế \`imem\` (LPM_ROM) và \`extender_16to32\` có chân \`ExtOp\` (\`1=SignExt\`, \`0=ZeroExt\`).\n- Thiết kế \`eq_comparator_32bit\` (XOR + NOR so sánh \`rs == rt\` tại ID)."
+
+          gh issue create -R "$REPO" \
+            --title "[TV1 - Khối 2] Lắp cụm tầng IF, ID, WB & Đóng gói thanh ghi IF_ID.bsf" \
+            --assignee "$USER_TV1" --label "datapath" \
+            --body "- Lắp Cụm Tầng IF (PC + Adder PC+4 + MUX nhánh + IMEM) và Cụm Tầng ID/WB.\n- Đóng gói \`IF_ID.bsf\` hỗ trợ chân \`Flush\` và \`Stall\`."
+
+          gh issue create -R "$REPO" \
+            --title "[TV2 - Khối 1] Thiết kế ALU 32-bit (7 phép toán), ALU Control & DMEM (.bdf/.bsf)" \
+            --assignee "$USER_TV2" --label "alu-mem" \
+            --body "- Thiết kế \`alu_32bit\` (AND, OR, ADD, SLL, SRL, SUB, NOR) dùng chung \`LPM_ADD_SUB\` và \`LPM_CLSHIFT\`.\n- Thiết kế \`dmem\` (LPM_RAM_DQ đồng bộ)."
+
+          gh issue create -R "$REPO" \
+            --title "[TV2 - Khối 2] Lắp cụm tầng EX, MEM & Đóng gói ID_EX, EX_MEM, MEM_WB (.bsf)" \
+            --assignee "$USER_TV2" --label "alu-mem" \
+            --body "- Lắp Cụm Tầng EX và MEM.\n- Đóng gói \`ID_EX.bsf\` (truyền \`shamt[4..0]\` và \`Ctrl[8..0]\`), \`EX_MEM.bsf\`, \`MEM_WB.bsf\`."
+
+          gh issue create -R "$REPO" \
+            --title "[TV3 - Khối 1] Thiết kế Main Control (14 lệnh), Forwarding & Hazard Unit (.bdf/.bsf)" \
+            --assignee "$USER_TV3" --label "control-hazard" \
+            --body "- Thiết kế \`control_unit\` giải mã 14 lệnh, xuất \`Ctrl[8..0]\`, \`ExtOp\`, \`Branch[1..0]\`.\n- Thiết kế \`forwarding_unit\` và \`hazard_detection_unit\` (hỗ trợ cả Data Hazard và Control Hazard trước \`beq/bne\`)."
+
+          gh issue create -R "$REPO" \
+            --title "[TV3 - Khối 2] Ghép nối MIPS_Top.bdf hoàn chỉnh, Test 14 lệnh & Đo Fmax DE2" \
+            --assignee "$USER_TV3" --label "control-hazard" \
+            --body "- Ghép 3 cụm vào \`MIPS_Top.bdf\`, chạy Waveform test đủ 14 lệnh, đo \`Fmax\` và làm LED 7 đoạn DE2."
